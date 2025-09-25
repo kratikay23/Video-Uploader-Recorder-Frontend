@@ -11,6 +11,7 @@ const FileUpload = () => {
     const [uploadedSize, setUploadedSize] = useState(0);
     const [totalSize, setTotalSize] = useState(0);
     const [uploading, setUploading] = useState(false);
+    const [activeTab, setActiveTab] = useState("upload"); // ✅ Tabs
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
@@ -24,7 +25,7 @@ const FileUpload = () => {
         setVideos(res.data);
     };
 
-    // file upload
+    // File Upload
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -62,15 +63,13 @@ const FileUpload = () => {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this video?")) return;
-
         try {
             await axios.delete(`${API.VIDEO_DELETE}/${id}`);
-            fetchVideos()
+            fetchVideos();
         } catch (err) {
             console.error("Error deleting video:", err);
         }
     };
-
 
     // Recording
     const startRecording = async () => {
@@ -117,96 +116,229 @@ const FileUpload = () => {
         setRecording(false);
     };
 
-    // Convert bytes → MB
     const formatSize = (bytes) => {
         if (!bytes) return "0 MB";
         return (bytes / (1024 * 1024)).toFixed(2) + " MB";
     };
 
-    return <>
-        <div style={{ padding: "20px", fontFamily: "Arial" }}>
-            <h2>Video Uploader & Recorder</h2>
-
-            {/* Upload input */}
-            <input type="file" onChange={handleFileChange} />
-
-            {uploading && (
-                <div style={{ marginTop: "10px" }}>
-                    <p>
-                        Uploading... {uploadProgress}% (
-                        {formatSize(uploadedSize)}/ {formatSize(totalSize)})
-                    </p>
-                    <progress value={uploadProgress} max="100"></progress>
-                </div>
-            )}
-
-            <br />
-
-            {/* Recording controls */}
-            {!recording ? (
-                <button onClick={startRecording}>Start Recording</button>
-            ) : (
-                <button onClick={stopRecording}>Stop Recording</button>
-            )}
-
-            {stream && recording && (
-                <div style={{ marginTop: "10px" }}>
-                    <video width="300" autoPlay muted ref={(video) => {
-                            if (video && video.srcObject !== stream) {
-                                video.srcObject = stream;
-                            }
+    return (
+        <div style={styles.wrapper}>
+            <div style={styles.card}>
+                {/* Tabs */}
+                <div style={styles.tabContainer}>
+                    <button
+                        style={{
+                            ...styles.tab,
+                            ...(activeTab === "upload" ? styles.activeTab : {}),
                         }}
-                    />
-                    <p>Recording: {recordTime} sec</p>
+                        onClick={() => setActiveTab("upload")}
+                    >
+                        Upload Video
+                    </button>
+                    <button
+                        style={{
+                            ...styles.tab,
+                            ...(activeTab === "videos" ? styles.activeTab : {}),
+                        }}
+                        onClick={() => setActiveTab("videos")}
+                    >
+                        Uploaded Videos
+                    </button>
                 </div>
-            )}
 
-            {/* Uploaded Videos */}
-            {videos.length > 0 && (
-                <table
-                    border="1"
-                    cellPadding="10"
-                    style={{ marginTop: "20px", width: "100%", textAlign: "center" }}
-                >
-                    <thead>
-                        <tr>
-                            <th>File Name</th>
-                            <th>Date & Time</th>
-                            <th>Size</th>
-                            <th>Preview</th>
-                            <th>Delete</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                {/* Upload Section */}
+                {activeTab === "upload" && (
+                    <div>
+                        <label style={styles.uploadBox}>
+                            <input type="file" onChange={handleFileChange} hidden />
+                            📂 Drag & Drop or Click to Upload
+                        </label>
+
+                        {uploading && (
+                            <div style={styles.progressCard}>
+                                <p>
+                                    Uploading... {uploadProgress}% ({formatSize(uploadedSize)} /{" "}
+                                    {formatSize(totalSize)})
+                                </p>
+                                <div style={styles.progressBar}>
+                                    <div
+                                        style={{
+                                            ...styles.progressFill,
+                                            width: `${uploadProgress}%`,
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ margin: "20px 0", textAlign: "center" }}>
+                            {!recording ? (
+                                <button style={styles.startBtn} onClick={startRecording}>
+                                    ⏺ Start Recording
+                                </button>
+                            ) : (
+                                <button style={styles.stopBtn} onClick={stopRecording}>
+                                    ⏹ Stop Recording
+                                </button>
+                            )}
+                        </div>
+
+                        {stream && recording && (
+                            <div style={styles.recordBox}>
+                                <video
+                                    width="300"
+                                    autoPlay
+                                    muted
+                                    ref={(video) => {
+                                        if (video && video.srcObject !== stream) {
+                                            video.srcObject = stream;
+                                        }
+                                    }}
+                                    style={styles.recordVideo}
+                                />
+                                <p style={styles.recordText}>
+                                    Recording: {recordTime} sec
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Uploaded Videos Section */}
+                {activeTab === "videos" && (
+                    <div style={styles.videoGrid}>
                         {videos.map((video) => (
-                            <tr key={video._id}>
-                                <td>{video.originalName}</td>
-                                <td>{new Date(video.uploadDate).toLocaleString()}</td>
-                                <td>{formatSize(video.size)}</td>
-                                <td>
-                                    <video width="200" controls>
-                                        <source
-                                            src={`http://localhost:5000/uploads/${video.filename}`}
-                                            type="video/mp4"
-                                        />
-                                    </video>
-                                </td>
-                                <td>
-                                    <button
-                                        onClick={() => handleDelete(video._id)}
-                                        style={{ background: "red", color: "white", border: "none", padding: "5px 10px", cursor: "pointer" }}
-                                    >
-                                        Delete
-                                    </button>
-                                </td>
-
-                            </tr>
+                            <div key={video._id} style={styles.videoCard}>
+                                <video width="100%" controls style={styles.videoPreview}>
+                                    <source
+                                        src={`http://localhost:5000/uploads/${video.filename}`}
+                                        type="video/mp4"
+                                    />
+                                </video>
+                                <h4 style={styles.cardTitle}>{video.originalName}</h4>
+                                <p style={styles.cardMeta}>
+                                    {new Date(video.uploadDate).toLocaleString()} <br />
+                                    Size: {formatSize(video.size)}
+                                </p>
+                                <button
+                                    style={styles.deleteBtn}
+                                    onClick={() => handleDelete(video._id)}
+                                >
+                                    🗑 Delete
+                                </button>
+                            </div>
                         ))}
-                    </tbody>
-                </table>
-            )}
+                    </div>
+                )}
+            </div>
         </div>
-    </>
+    );
+};
+
+/* 🎨 Styles */
+const styles = {
+    wrapper: {
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#7b4c4c",
+        padding: "20px",
+    },
+    card: {
+        background: "#fff",
+        borderRadius: "12px",
+        padding: "20px",
+        width: "600px",
+        boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+    },
+    tabContainer: {
+        display: "flex",
+        marginBottom: "20px",
+    },
+    tab: {
+        flex: 1,
+        padding: "10px",
+        border: "none",
+        cursor: "pointer",
+        background: "#f1f1f1",
+        borderRadius: "8px 8px 0 0",
+        fontWeight: "500",
+    },
+    activeTab: {
+        background: "#007bff",
+        color: "#fff",
+    },
+    uploadBox: {
+        border: "2px dashed #ccc",
+        borderRadius: "8px",
+        padding: "30px",
+        display: "block",
+        textAlign: "center",
+        color: "#555",
+        cursor: "pointer",
+        marginBottom: "20px",
+    },
+    progressCard: {
+        background: "#f9f9f9",
+        padding: "10px",
+        borderRadius: "6px",
+        marginBottom: "15px",
+    },
+    progressBar: {
+        height: "10px",
+        background: "#eee",
+        borderRadius: "6px",
+        overflow: "hidden",
+    },
+    progressFill: {
+        height: "100%",
+        background: "linear-gradient(90deg,#007bff,#00c6ff)",
+    },
+    startBtn: {
+        background: "#28a745",
+        color: "white",
+        padding: "10px 20px",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+    },
+    stopBtn: {
+        background: "#dc3545",
+        color: "white",
+        padding: "10px 20px",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+    },
+    recordBox: { marginTop: "10px", textAlign: "center" },
+    recordVideo: { borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" },
+    recordText: { marginTop: "5px", fontSize: "14px", color: "#ff4444" },
+    videoGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+        gap: "15px",
+    },
+    videoCard: {
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        padding: "10px",
+        background: "#fff",
+        boxShadow: "0 3px 8px rgba(0,0,0,0.1)",
+        textAlign: "center",
+    },
+    videoPreview: { borderRadius: "6px" },
+    cardTitle: { margin: "5px 0", fontSize: "14px", fontWeight: "bold" },
+    cardMeta: { fontSize: "12px", color: "#777" },
+    deleteBtn: {
+        background: "#ff4444",
+        color: "white",
+        padding: "6px 12px",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+        marginTop: "8px",
+    },
 };
 
 export default FileUpload;
