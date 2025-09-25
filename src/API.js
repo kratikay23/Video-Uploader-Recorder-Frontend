@@ -1,5 +1,5 @@
 export default {
-    VIDEO_POST : "http://localhost:5000/upload",
-    VIDEO_GET :"http://localhost:5000/videos",
-    VIDEO_DELETE : "http://localhost:5000/videos"
+    VIDEO_POST : "https://videouploader-recorder-backend-2.onrender.com/upload",
+    VIDEO_GET :"https://videouploader-recorder-backend-2.onrender.com/videos",
+    VIDEO_DELETE : "https://videouploader-recorder-backend-2.onrender.com/videos"
 }
