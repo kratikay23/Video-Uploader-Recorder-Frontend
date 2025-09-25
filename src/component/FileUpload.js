@@ -211,7 +211,7 @@ const FileUpload = () => {
                             <div key={video._id} style={styles.videoCard}>
                                 <video width="100%" controls style={styles.videoPreview}>
                                     <source
-                                        src={`http://localhost:5000/uploads/${video.filename}`}
+                                        src={`https://videouploader-recorder-backend-2.onrender.com/uploads/${video.filename}`}
                                         type="video/mp4"
                                     />
                                 </video>
@@ -342,3 +342,4 @@ const styles = {
 };
 
 export default FileUpload;
+
