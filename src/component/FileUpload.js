@@ -11,7 +11,8 @@ const FileUpload = () => {
     const [uploadedSize, setUploadedSize] = useState(0);
     const [totalSize, setTotalSize] = useState(0);
     const [uploading, setUploading] = useState(false);
-    const [activeTab, setActiveTab] = useState("upload"); // ✅ Tabs
+    const [remainingTime, setRemainingTime] = useState("00:00:00"); // ⏳ NEW
+    const [activeTab, setActiveTab] = useState("upload");
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
@@ -37,19 +38,30 @@ const FileUpload = () => {
         setUploadProgress(0);
         setUploadedSize(0);
         setTotalSize(file.size);
+        setRemainingTime("00:00:00");
 
         const formData = new FormData();
         formData.append("video", file);
+
+        const startTime = Date.now();
 
         try {
             await axios.post(API.VIDEO_POST, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
                 onUploadProgress: (progressEvent) => {
-                    const percent = Math.round(
-                        (progressEvent.loaded * 100) / progressEvent.total
-                    );
+                    const elapsed = (Date.now() - startTime) / 1000; // seconds
+                    const loaded = progressEvent.loaded;
+                    const total = progressEvent.total;
+
+                    const percent = Math.round((loaded * 100) / total);
                     setUploadProgress(percent);
-                    setUploadedSize(progressEvent.loaded);
+                    setUploadedSize(loaded);
+
+                    // Upload speed (bytes/sec)
+                    const speed = loaded / elapsed;
+                    // Remaining time in seconds
+                    const remaining = Math.max((total - loaded) / speed, 0);
+                    setRemainingTime(formatTime(remaining));
                 },
             });
 
@@ -59,6 +71,16 @@ const FileUpload = () => {
         } finally {
             setUploading(false);
         }
+    };
+
+    // ⏳ format time helper
+    const formatTime = (seconds) => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${hrs.toString().padStart(2, "0")}:${mins
+            .toString()
+            .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     };
 
     const handleDelete = async (id) => {
@@ -157,9 +179,10 @@ const FileUpload = () => {
                         {uploading && (
                             <div style={styles.progressCard}>
                                 <p>
-                                    Uploading... {uploadProgress}% ({formatSize(uploadedSize)} /{" "}
-                                    {formatSize(totalSize)})
+                                    Uploading... {uploadProgress}% (
+                                    {formatSize(uploadedSize)} / {formatSize(totalSize)})
                                 </p>
+                                <p>⏳ Time left: {remainingTime}</p>
                                 <div style={styles.progressBar}>
                                     <div
                                         style={{
@@ -342,4 +365,3 @@ const styles = {
 };
 
 export default FileUpload;
-
